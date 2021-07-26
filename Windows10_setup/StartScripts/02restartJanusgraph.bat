@@ -1,0 +1,3 @@
+echo STARTING JANUSGRAPH ...
+CMD /c "docker restart jce-jg jce-es jce-cql"
+echo JANUSGRAPH STARTED

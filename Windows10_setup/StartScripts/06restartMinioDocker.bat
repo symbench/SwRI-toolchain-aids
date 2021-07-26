@@ -1,0 +1,3 @@
+echo RESTARTING MINIO SERVER ...
+CMD /c "docker restart minio-server"
+echo MINIO SERVER STARTED

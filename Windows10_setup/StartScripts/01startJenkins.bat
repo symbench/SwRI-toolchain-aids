@@ -1,0 +1,3 @@
+echo STARTING JENKINS ...
+CMD /k "docker-compose -f C:\NewDeploy\docker\jenkins-pipeline\docker-compose-win-c.yaml up"
+echo JENKINS STARTED

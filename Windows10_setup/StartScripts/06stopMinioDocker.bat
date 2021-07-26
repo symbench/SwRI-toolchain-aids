@@ -1,0 +1,3 @@
+echo STOPPING MINIO SERVER ...
+CMD /c "docker stop minio-server"
+echo MINIO SERVER STOPPED
