@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: A template for creating a set of instances for the SwRI Toolchain
+
+Parameters:
+
+  VpcId:
+    Type: String
+    Description: VPC id
+    Default: vpc-032d664b0437ecb7b
+  SubnetId:
+    Type: String
+    Description: Subnet in which to launch an EC2
+    Default: subnet-049a9410965a8d944
+  AvailabilityZone:
+    Type: String
+    Description: Availability Zone into which instance will launch
+    Default: us-east-1a
+  KeyName:
+    Description: SSH Keypair to login to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: metelko-ssh2-rsa-2048
+  ServerAmiId:
+    Type: String
+    Description: AMI ID of the saved SwRI Server Image
+    Default: ami-0a6066734c6aab3a5
+  ClientAmiId:
+    Type: String
+    Description: AMI ID of the saved SwRI Client Image
+    Default: ami-0af8ab7a5a8698b34
+  GpuType:
+    Type: String
+    Description: Type of GPU to use with the Client Image
+    Default: eg1.large
+    AllowedValues:
+      - eg1.medium
+      - eg1.large
+      - eg1.xlarge
+      - eg1.2xlarge
+
+Resources:
+  SwRIServerInstance:
+    Type: 'AWS::EC2::Instance'
+    DeletionPolicy: Retain
+    Properties:
+      ImageId: !Ref ServerAmiId
+      InstanceType: t2.xlarge
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - Fn::GetAtt: [ SwRIServerSecurityGroup, GroupId ]
+      AvailabilityZone: !Ref AvailabilityZone
+      SubnetId: !Ref SubnetId
+      BlockDeviceMappings:
+        -
+          DeviceName: /dev/xvda
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: 100
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            /home/ec2-user/start-dockers.sh
+
+  SwRIClientInstance:
+    Type: "AWS::EC2::Instance"
+    DeletionPolicy: Retain
+    Properties:
+      ImageId: !Ref ClientAmiId
+      InstanceType: t3.2xlarge
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - Fn::GetAtt: [ SwRIClientSecurityGroup, GroupId ]
+      AvailabilityZone: !Ref AvailabilityZone
+      SubnetId: !Ref SubnetId
+      BlockDeviceMappings:
+        -
+          DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: 100
+      ElasticGpuSpecifications:
+        - Type: !Ref GpuType
+      UserData:
+        Fn::Base64: !Sub |
+          <script>
+            echo "${SwRIServerInstance.PrivateIp}" > serverIP
+            C:\SetupRepos\updateServerIP.bat serverIP
+          </script>
+
+  SwRIServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SwRI Toolchain incoming access for server
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8182
+          ToPort: 8182
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 50000
+          ToPort: 50000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9000
+          ToPort: 9000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9200
+          ToPort: 9200
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9001
+          ToPort: 9001
+          CidrIp: 0.0.0.0/0
+
+  SwRIClientSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: SwRI Toolchain incoming access for client
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1239
+          ToPort: 1239
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+
+
+
+TODO:
+1) How is port 2007 specified for GPU?
+2) Client userdata script did not run (IP update)
