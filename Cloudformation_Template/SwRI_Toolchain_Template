@@ -26,7 +26,7 @@ Parameters:
   ClientAmiId:
     Type: String
     Description: AMI ID of the saved SwRI Client Image
-    Default: ami-08af24c1d2cc853d2
+    Default: ami-0cd59cdd6ec9e67cd
   GpuType:
     Type: String
     Description: Type of GPU to use with the Client Image
@@ -40,6 +40,7 @@ Parameters:
 Resources:
   SwRIServerInstance:
     Type: 'AWS::EC2::Instance'
+    DependsOn: SwRIServerInstance
     DeletionPolicy: Retain
     Properties:
       ImageId: !Ref ServerAmiId
@@ -83,7 +84,7 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           <script>
-            setx SYMBENCHSERVERIP "${SwRIServerInstance.PrivateIp}"
+            setx -m SYMBENCHSERVERIP "${SwRIServerInstance.PrivateIp}"
             C:\SetupRepos\updateServerIP.bat %SYMBENCHSERVERIP%
           </script>
 
@@ -176,6 +177,14 @@ Previous idea:
           <script>
             echo "$SERVER_IP" > /tmp/serverIP
             C:\SetupRepos\updateServerIP.bat SERVER_IP
+          </script>
+
+another previous try:
+      UserData:
+        Fn::Base64: !Sub |
+          <script>
+            setx SYMBENCHSERVERIP "${SwRIServerInstance.PrivateIp}"
+            C:\SetupRepos\updateServerIP.bat %SYMBENCHSERVERIP%
           </script>
 
 
