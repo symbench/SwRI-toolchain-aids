@@ -26,7 +26,7 @@ Parameters:
   ClientAmiId:
     Type: String
     Description: AMI ID of the saved SwRI Client Image
-    Default: ami-0cd59cdd6ec9e67cd
+    Default: ami-00b1452e3337d7de1
   GpuType:
     Type: String
     Description: Type of GPU to use with the Client Image
@@ -40,7 +40,6 @@ Parameters:
 Resources:
   SwRIServerInstance:
     Type: 'AWS::EC2::Instance'
-    DependsOn: SwRIServerInstance
     DeletionPolicy: Retain
     Properties:
       ImageId: !Ref ServerAmiId
@@ -64,6 +63,7 @@ Resources:
 
   SwRIClientInstance:
     Type: "AWS::EC2::Instance"
+    DependsOn: SwRIServerInstance
     DeletionPolicy: Retain
     Properties:
       ImageId: !Ref ClientAmiId
@@ -84,8 +84,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           <script>
-            setx -m SYMBENCHSERVERIP "${SwRIServerInstance.PrivateIp}"
-            C:\SetupRepos\updateServerIP.bat %SYMBENCHSERVERIP%
+            setx SYMBENCHSERVERIP ${SwRIServerInstance.PrivateIp} /m
+            C:\StartScripts\updateServerIP.bat ${SwRIServerInstance.PrivateIp}
           </script>
 
   SwRIServerSecurityGroup:
@@ -128,9 +128,7 @@ Resources:
     Properties:
       VpcId: !Ref VpcId
       GroupDescription: SwRI Toolchain incoming access for client
-      InboundRule:
-        Type: AWS::EC2::SecurityGroupIngress
-        Properties:
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 1239
           ToPort: 1239
@@ -139,63 +137,23 @@ Resources:
           FromPort: 3389
           ToPort: 3389
           CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 2007
-          ToPort: 2007
-          CidrIp:
-            Fn::GetAtt:
-              - SwRIClientSecurityGroup
-              - GroupId
-      OutboundRule:
-        Type: AWS::EC2::SecurityGroupEgress
-        Properties:
-          IpProtocol: tcp
-          FromPort: 0
-          ToPort: 65535
-          CidrIp:
-            Fn::GetAtt:
-              - SwRIClientSecurityGroup
-              - GroupId
 
+  SwRIClientSecurityGroupIngressCircular:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Description: Security group ingress rule for Elastic GPU communication
+    Properties:
+        GroupId: !Ref SwRIClientSecurityGroup
+        SourceSecurityGroupId: !Ref SwRIClientSecurityGroup
+        IpProtocol: tcp
+        FromPort: 2007
+        ToPort: 2007
 
-
-TODO:
-1) How is port 2007 specified for GPU?
-
-Thought for GPU - consider setting up two SecurityGroups, one for GPU and reference both
-  still not sure how to setup GPU SecurityGroup
-  https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/working-with-elastic-graphics.html#elastic-graphics-security
-    has how to verify functionality of GPU
-
-2) Client userdata script did not run (IP update)
-
-Previous idea:
-      UserData:
-        Fn::Base64: !Sub |
-          serverIP: !GetAtt SwRIServerInstance.PrivateIp   ---- consider using this?
-          SERVER_IP=${SwRIServerInstance.PrivateIp}
-          <script>
-            echo "$SERVER_IP" > /tmp/serverIP
-            C:\SetupRepos\updateServerIP.bat SERVER_IP
-          </script>
-
-another previous try:
-      UserData:
-        Fn::Base64: !Sub |
-          <script>
-            setx SYMBENCHSERVERIP "${SwRIServerInstance.PrivateIp}"
-            C:\SetupRepos\updateServerIP.bat %SYMBENCHSERVERIP%
-          </script>
-
-
-Another thought:  https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-windows-user-data.html
-version: 1.0
-tasks:
-- task: executeScript
-  inputs:
-  - frequency: always
-    type: batch
-    runAs: localSystem
-    content: |-
-      echo Current date and time >> %SystemRoot%\Temp\test.log
-      echo %DATE% %TIME% >> %SystemRoot%\Temp\test.log
+  SwRIClientSecurityGroupEgressCircular:
+    Type: 'AWS::EC2::SecurityGroupEgress'
+    Description: Security group egress rule for Elastic GPU communication
+    Properties:
+        GroupId: !Ref SwRIClientSecurityGroup
+        SourceSecurityGroupId: !Ref SwRIClientSecurityGroup
+        IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
