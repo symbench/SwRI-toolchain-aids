@@ -18,7 +18,8 @@ docker network create --driver bridge jg-network
 
 docker-compose -f /opt/NewDeploy/docker/jenkins-pipeline/docker-compose.yaml up -d
 docker-compose -f /opt/NewDeploy/docker/janusgraph-cql-es-dynamic/docker-compose.yaml up --build --force-recreate -d
-docker-compose -f /opt/NewDeploy/docker/minio/docker-compose.yaml up -d
+#docker-compose -f /opt/NewDeploy/docker/minio/docker-compose.yaml up -d
+docker run -d --name minio-server -p 9000:9000 -p 9001:9001 -v /opt/minioData:/data --env MINIO_ACCESS_KEY="symcps" --env MINIO_SECRET_KEY="symcps2021" minio/minio server /data --console-address ":9001"
 echo "Dockers started"
 
 SETUP_IP="10.55.25.48"
