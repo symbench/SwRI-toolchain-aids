@@ -9,13 +9,16 @@ if %ERRORLEVEL% neq 0 goto WAIT_JENKINS
 ping 127.0.0.1 -n 10 > nul
 
 START C:\StartScripts\02startJanusgraph.bat
-TIMEOUT /T 60 /nobreak > nul
+:WAIT_JANUSGRAPH
+netstat -q -n -p TCP | find ":8182" >nul 2>nul
+if %ERRORLEVEL% neq 0 goto WAIT_JANUSGRAPH
 
-START C:\StartScripts\03loadJanusgraph.bat
-
-TIMEOUT /T 60 /nobreak > nul
 START C:\StartScripts\04startBigHoss
 
 START C:\StartScripts\05openJenkins.bat
 
 START C:\StartScripts\06createMinioDocker.bat
+
+TIMEOUT /T 140 /nobreak > nul
+
+START C:\StartScripts\03loadJanusgraph.bat
