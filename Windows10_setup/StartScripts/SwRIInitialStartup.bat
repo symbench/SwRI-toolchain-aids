@@ -21,4 +21,6 @@ START C:\StartScripts\06createMinioDocker.bat
 
 TIMEOUT /T 140 /nobreak > nul
 
+START C:\StartScripts\03symMapper.bat
+
 START C:\StartScripts\03loadJanusgraph.bat
