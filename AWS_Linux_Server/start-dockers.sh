@@ -27,4 +27,4 @@ CURRENT_IP=$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 sleep 10
 docker exec -d jenkins sed -i "s/$SETUP_IP/$CURRENT_IP/g" /var/jenkins_home/jenkins.model.JenkinsLocationConfiguration.xml
 echo "Updated Jenkins URL to: $CURRENT_IP"
-echo "After about 5 mins, run './upload_corpus_docker.sh' to upload the graph database"
+#echo "After about 5 mins, run './upload_corpus_docker.sh' to upload the graph database"
